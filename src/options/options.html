@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Ultimate X Tool • Settings</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+	<link rel="stylesheet" href="../styles/tokens.css" />
+	<style>
+		* { box-sizing: border-box; }
+		html, body { height: 100%; }
+		body { margin: 0; display:grid; place-items:center; background: var(--color-bg); padding: var(--space-6); }
+		.wrap { width: min(700px, 92vw); }
+		.card { padding: var(--space-6); }
+		.header { display:flex; align-items:center; justify-content: space-between; margin-bottom: var(--space-4); }
+		.h1 { font: 600 var(--text-xl) var(--font-sans); }
+		.grid { display:grid; gap: 16px; grid-template-columns: 1fr 180px; }
+		.row { display: contents; }
+		.label { font-weight:600; }
+		.help { color: var(--color-text-dim); }
+		select, input[type="number"] { background: var(--color-elev); color: var(--color-text); border:1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; }
+		.actions { margin-top: var(--space-6); display:flex; justify-content: flex-end; gap: 12px; }
+
+		/* Tabs */
+		.tabs { display:flex; gap: 8px; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); }
+		.tab { appearance:none; background: transparent; color: var(--color-text-dim); border: 1px solid var(--color-border); border-bottom: none; padding: 8px 12px; border-radius: var(--radius-md) var(--radius-md) 0 0; cursor: pointer; }
+		.tab[aria-selected="true"] { color: var(--color-text); background: var(--color-surface); border-color: var(--color-border); }
+		.panels { border: 1px solid var(--color-border); border-radius: 0 0 var(--radius-md) var(--radius-md); padding: var(--space-5); background: var(--color-surface); }
+		.panel { display: none; }
+		.panel[aria-hidden="false"] { display: block; }
+	</style>
+</head>
+<body>
+	<div class="wrap elev-card card">
+		<div class="header">
+			<div class="h1">Settings</div>
+			<button id="save" class="btn btn-primary">Save</button>
+		</div>
+		<div class="tabs" role="tablist" aria-label="Settings sections">
+			<button class="tab" role="tab" id="tab-adblocker" aria-controls="panel-adblocker" aria-selected="false">Ad Blocker</button>
+			<button class="tab" role="tab" id="tab-follow" aria-controls="panel-follow" aria-selected="true">Follow Back</button>
+			<button class="tab" role="tab" id="tab-interaction" aria-controls="panel-interaction" aria-selected="false">Interaction</button>
+		</div>
+		<div class="panels">
+			<section id="panel-adblocker" class="panel" role="tabpanel" aria-labelledby="tab-adblocker" aria-hidden="true">
+				<p class="help">Ad Blocker settings will appear here. (Coming soon)</p>
+			</section>
+			<section id="panel-follow" class="panel" role="tabpanel" aria-labelledby="tab-follow" aria-hidden="false">
+				<div class="grid">
+					<div class="label">Safe Mode</div>
+					<div><input id="safe-mode" class="switch" type="checkbox" /></div>
+					<div class="help">Human-like delays to avoid rate limits.</div>
+					<div></div>
+
+					<div class="label">Max follows per run</div>
+					<div>
+						<input id="max-follows" type="number" min="1" max="200" step="1" value="20" />
+					</div>
+					<div class="help">Stops after reaching this number in one session.</div>
+					<div></div>
+				</div>
+			</section>
+			<section id="panel-interaction" class="panel" role="tabpanel" aria-labelledby="tab-interaction" aria-hidden="true">
+				<p class="help">Interaction settings will appear here. (Coming soon)</p>
+			</section>
+		</div>
+	</div>
+
+	<script type="module">
+		const safe = document.getElementById('safe-mode');
+		const maxF = document.getElementById('max-follows');
+		const saveBtn = document.getElementById('save');
+		const tabs = Array.from(document.querySelectorAll('.tab'));
+		const panels = Array.from(document.querySelectorAll('.panel'));
+
+		function setActiveTab(id) {
+			const tabId = `tab-${id}`;
+			const panelId = `panel-${id}`;
+			tabs.forEach(t => t.setAttribute('aria-selected', String(t.id === tabId)));
+			panels.forEach(p => p.setAttribute('aria-hidden', String(p.id !== panelId)));
+			chrome.storage.sync.set({ optionsSelectedTab: id }).catch(() => {});
+		}
+
+		tabs.forEach(tab => {
+			tab.addEventListener('click', () => {
+				const id = tab.id.replace('tab-', '');
+				setActiveTab(id);
+			});
+			tab.addEventListener('keydown', (e) => {
+				if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+				e.preventDefault();
+				const idx = tabs.indexOf(tab);
+				const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+				tabs[next].focus();
+				const id = tabs[next].id.replace('tab-', '');
+				setActiveTab(id);
+			});
+		});
+
+		(async () => {
+			const { safeMode = true, maxFollows = 20, optionsSelectedTab = 'follow' } = await chrome.storage.sync.get({ safeMode: true, maxFollows: 20, optionsSelectedTab: 'follow' });
+			if (safe) safe.checked = Boolean(safeMode);
+			if (maxF) maxF.value = String(maxFollows);
+			setActiveTab(optionsSelectedTab);
+		})();
+
+		saveBtn.addEventListener('click', async () => {
+			await chrome.storage.sync.set({ safeMode: Boolean(safe?.checked), maxFollows: Number(maxF?.value || 20) });
+			saveBtn.textContent = 'Saved';
+			setTimeout(() => saveBtn.textContent = 'Save', 1000);
+		});
+	</script>
+</body>
+</html>
+

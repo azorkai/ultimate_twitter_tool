@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Ultimate X Tool</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+	<link rel="stylesheet" href="../styles/tokens.css" />
+	<link rel="stylesheet" href="../styles/popup.css" />
+	<style>
+		* { box-sizing: border-box; }
+		body { margin: 0; padding: var(--space-4); background: var(--color-surface); }
+		.container { width: 360px; max-width: 100vw; }
+		.card { padding: var(--space-4); }
+		.header { display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-bottom: var(--space-3); }
+		.title { font: 600 var(--text-lg) var(--font-sans); }
+		.subtitle { font-size: var(--text-sm); color: var(--color-text-dim); }
+		.row { display:flex; align-items:center; justify-content: space-between; gap: 12px; margin: var(--space-3) 0; }
+		.kbd { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-dim); }
+		.footer { display:flex; justify-content: space-between; align-items:center; margin-top: var(--space-4); }
+		.badge { padding: 4px 8px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); color: var(--color-text-dim); }
+		.notice { background: rgba(91,140,255,0.08); border: 1px dashed var(--color-border); color: var(--color-text-dim); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: var(--space-3); }
+	</style>
+</head>
+<body>
+	<div class="container elev-card card shell" data-sidebar-open="false">
+		<aside class="sidebar" id="sidebar" aria-label="Sidebar Navigation">
+			<nav class="nav" role="tablist" aria-orientation="vertical">
+				<button class="nav-item is-active" role="tab" aria-selected="true" aria-controls="page-home" id="tab-home" data-page="home">
+					<span class="icon" aria-hidden="true">
+						<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<use href="./assets/icons.svg#i-home"></use>
+						</svg>
+					</span>
+					<span class="label">Home</span>
+				</button>
+				<button class="nav-item" role="tab" aria-selected="false" aria-controls="page-follow" id="tab-follow" data-page="follow">
+					<span class="icon" aria-hidden="true">
+						<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<use href="./assets/icons.svg#i-user-plus"></use>
+						</svg>
+					</span>
+					<span class="label">Follow Back</span>
+				</button>
+				<button class="nav-item" role="tab" aria-selected="false" aria-controls="page-engage" id="tab-engage" data-page="engage">
+					<span class="icon" aria-hidden="true">
+						<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<use href="./assets/icons.svg#i-sparkles"></use>
+						</svg>
+					</span>
+					<span class="label">Engage</span>
+				</button>
+			</nav>
+		</aside>
+
+		<div class="content" role="region" aria-label="Main content">
+			<div class="topbar">
+				<button id="toggle-sidebar" class="icon-btn" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+				</button>
+				<div class="topbar-title">
+					<div class="title">Ultimate X Tool</div>
+					<div class="subtitle">Everything you need to maximize your X experience.</div>
+				</div>
+				<button class="btn btn-ghost" id="open-options">Settings</button>
+			</div>
+
+			<section id="page-home" class="page" data-page="home" role="tabpanel" aria-labelledby="tab-home">
+				<div id="welcome" class="notice">Enter your X username to personalize the profile.</div>
+				<div class="profile-form">
+					<div class="field">
+						<label for="username" class="field-label">X username</label>
+						<div class="field-hint">We'll use it to open and fetch your profile.</div>
+						<input id="username" class="input" placeholder="@username" />
+					</div>
+					<div class="actions">
+						<button id="fetch-profile" class="btn btn-primary btn-lg">Fetch Profile</button>
+					</div>
+				</div>
+				<div id="profile-card" class="profile-card" hidden>
+					<div class="profile-header">
+						<img id="profile-avatar" class="profile-avatar" alt="Profile avatar" />
+						<div class="profile-meta">
+							<div id="profile-name" class="profile-name"></div>
+							<div id="profile-handle" class="profile-handle"></div>
+						</div>
+					</div>
+					<div id="profile-bio" class="profile-bio" hidden></div>
+					<div class="profile-stats">
+						<div class="stat">
+							<div class="stat-value" id="stat-followers">-</div>
+							<div class="stat-label">Followers</div>
+						</div>
+						<div class="stat">
+							<div class="stat-value" id="stat-following">-</div>
+							<div class="stat-label">Following</div>
+						</div>
+						<div class="profile-actions">
+							<a id="open-profile" class="btn btn-ghost" target="_blank" rel="noreferrer">Open Profile</a>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="page-follow" class="page" data-page="follow" role="tabpanel" aria-labelledby="tab-follow" hidden>
+				<div class="row">
+					<div>
+						<div style="font-weight:600;">Safe Mode</div>
+						<div class="muted">Prevents fast actions, human-like delays.</div>
+					</div>
+					<input id="safe-mode" class="switch" type="checkbox" />
+				</div>
+				<div class="row">
+					<div>
+						<div style="font-weight:600;">Max follows per run</div>
+						<div class="muted">Caps total follow actions in one session.</div>
+					</div>
+					<select id="max-follows" class="btn" style="padding:8px 12px;">
+						<option value="10">10</option>
+						<option value="20">20</option>
+						<option value="30">30</option>
+						<option value="50">50</option>
+					</select>
+				</div>
+				<div class="row follow-controls" style="align-items: center; gap: 8px; flex-wrap: wrap;">
+					<button id="start-follow-back" class="btn btn-primary">Follow Back</button>
+					<button id="pause-follow-back" class="btn btn-ghost" aria-pressed="false">Pause</button>
+					<button id="cancel-follow-back" class="btn btn-danger">Cancel</button>
+				</div>
+				<div class="progress-wrap" aria-live="polite">
+					<div class="progress-bar"><div class="progress-fill" id="fb-progress-fill" style="width:0%"></div></div>
+					<div class="progress-stats"><span id="fb-progress-text">0 / 0</span> <span id="fb-status-text" class="muted">Idle</span></div>
+				</div>
+			</section>
+
+			<section id="page-engage" class="page" data-page="engage" role="tabpanel" aria-labelledby="tab-engage" hidden>
+				<div class="row">
+					<div>
+						<div style="font-weight:600;">Engage type</div>
+						<div class="muted">Choose how to interact with tweets.</div>
+					</div>
+					<select id="engage-type" class="btn" style="padding:8px 12px;">
+						<option value="likes">Likes</option>
+						<option value="retweets">Retweets</option>
+					</select>
+				</div>
+				<div class="row">
+					<div>
+						<div style="font-weight:600;">Max actions per run</div>
+						<div class="muted">Caps total engagement actions.</div>
+					</div>
+					<select id="max-engage" class="btn" style="padding:8px 12px;">
+						<option value="10">10</option>
+						<option value="20">20</option>
+						<option value="30">30</option>
+						<option value="50">50</option>
+					</select>
+				</div>
+				<div class="row">
+					<button id="open-engage-feed" class="btn">Open Engage Feed</button>
+					<button id="start-engage" class="btn btn-primary">Start Engage</button>
+				</div>
+			</section>
+
+			<div class="pagination" role="navigation" aria-label="Pagination">
+				<button class="icon-btn" id="page-prev" aria-label="Previous page" disabled>
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
+				<div class="page-dots">
+					<button class="dot is-active" data-page="home" aria-label="Go to Home"></button>
+					<button class="dot" data-page="follow" aria-label="Go to Follow Back"></button>
+					<button class="dot" data-page="engage" aria-label="Go to Engage"></button>
+				</div>
+				<button class="icon-btn" id="page-next" aria-label="Next page">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				</button>
+			</div>
+		</div>
+
+		<div class="overlay" id="sidebar-overlay" hidden></div>
+	</div>
+
+	<script type="module" src="./popup.js"></script>
+</body>
+</html>
+

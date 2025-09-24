@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Ultimate X Tool",
+  "description": "Assist with following back verified followers on X.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "src/popup/popup.html"
+  },
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": ["https://x.com/*"],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "options_page": "src/options/options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*"],
+      "js": [
+        "src/content/dev-logger.js",
+        "src/content/verified-followers.js",
+        "src/content/profile-scraper.js",
+        "src/content/favorites.js",
+        "src/content/profile-button.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
+

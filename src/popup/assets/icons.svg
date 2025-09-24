@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <!-- Home -->
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 11l9-7 9 7"/>
+    <path d="M5 10v9a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2v-9"/>
+  </symbol>
+
+  <!-- User Plus (Follow Back) -->
+  <symbol id="i-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M20 8v6"/>
+    <path d="M17 11h6"/>
+  </symbol>
+
+  <!-- Sparkles (Engage) -->
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 3l1.5 3L10 7.5 6.5 9 5 12 3.5 9 0 7.5 3.5 6 5 3z" transform="translate(2 2) scale(1)"/>
+    <path d="M17 3l.8 1.6L19 6l-1.2 1.4L17 9l-.8-1.6L15 6l1.2-1.4L17 3z"/>
+    <path d="M19 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/>
+  </symbol>
+</svg>
+
+
