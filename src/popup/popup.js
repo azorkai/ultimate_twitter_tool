@@ -3,6 +3,7 @@ import { initSidebar } from './scripts/modules/sidebar.js';
 import { initHomePage } from './scripts/pages/home.js';
 import { initFollowPage } from './scripts/pages/follow.js';
 import { initEngagePage } from './scripts/pages/engage.js';
+import { initFavoritesPage } from './scripts/pages/favorites.js';
 
 const router = createRouter({
 	defaultPage: 'home',
@@ -32,6 +33,7 @@ initSidebar({
 initHomePage();
 initFollowPage();
 initEngagePage();
+initFavoritesPage();
 
 router.init();
 

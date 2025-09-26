@@ -49,6 +49,7 @@
 			handle,
 			userId: profile.userId || null,
 			displayName: profile.displayName || null,
+			followers: typeof profile.followerCount === 'number' ? profile.followerCount : null,
 			addedAt: Date.now()
 		};
 		await saveAll(map);

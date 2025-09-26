@@ -14,6 +14,20 @@
 	const DM_BUTTON_SELECTOR = '[data-testid="sendDMFromProfile"]';
 	const FOLLOW_CONTAINER_SELECTOR = '[data-testid="placementTracking"]';
 
+	let currentProfileKey = null;
+
+	function getProfileKeyFromLocation() {
+		const seg = (location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase();
+		return seg || null;
+	}
+
+	function getUrlHandle() {
+		const reserved = new Set(["home","explore","notifications","messages","i","settings"]);
+		const key = getProfileKeyFromLocation();
+		if (!key || reserved.has(key)) return null;
+		return key;
+	}
+
 	function createHost() {
 		const host = document.createElement("div");
 		host.id = HOST_ID;
@@ -25,6 +39,9 @@
 		host.style.alignSelf = "center";
 		host.style.lineHeight = "0";
 		host.style.isolation = "isolate";
+		// Ensure hover effects are not hidden by siblings/background
+		host.style.position = "relative";
+		host.style.zIndex = "999";
 
 		const shadow = host.attachShadow({ mode: "open" });
 
@@ -37,7 +54,7 @@
 				--utt-bg: conic-gradient(from 180deg at 50% 50%, #39c1ff, #8a5cff, #39c1ff);
 				width: var(--utt-size);
 				height: var(--utt-size);
-				border-radius: 12px;
+				border-radius: 9999px;
 				border: 1px solid rgba(255,255,255,0.14);
 				background: radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 60%),
 					linear-gradient(#0b0f14, #0b0f14) padding-box,
@@ -50,6 +67,7 @@
 				outline: none;
 				box-shadow: 0 0 0 0 rgba(138,92,255,0.6);
 				transition: box-shadow 200ms ease, transform 200ms ease, filter 200ms ease;
+				margin-bottom: 9px;
 			}
 			.button:hover { transform: translateY(-1px); filter: saturate(1.2); }
 			.button:focus-visible { box-shadow: 0 0 0 3px rgba(56, 124, 255, 0.4); }
@@ -113,19 +131,16 @@
 	}
 
 	function getProfileInfo() {
-		// Handle from username pill
-		let handle = null;
+		// Prefer explicit URL handle to avoid stale DOM during SPA transitions
+		let handle = getUrlHandle();
+		// Fallback: username pill
 		const userName = document.querySelector('[data-testid="UserName"]');
-		if (userName) {
+		if (!handle && userName) {
 			const spans = userName.querySelectorAll('span');
 			for (const s of spans) {
 				const t = (s.textContent || '').trim();
 				if (t.startsWith('@') && t.length > 1) { handle = t.slice(1); break; }
 			}
-		}
-		if (!handle) {
-			const seg = (location.pathname.split('/').filter(Boolean)[0] || '').trim();
-			if (seg && !['home','explore','notifications','messages','i','settings'].includes(seg)) handle = seg;
 		}
 		// Display name
 		let displayName = null;
@@ -133,6 +148,27 @@
 			const nameDiv = userName.querySelector('div[dir="ltr"]');
 			if (nameDiv) displayName = (nameDiv.textContent || '').trim();
 		}
+		// Followers count (try variants, parse human formats)
+		function parseHumanNumber(text) {
+			const t = String(text || '').replace(/[,\s]/g, '').toUpperCase();
+			const m = t.match(/([0-9]*\.?[0-9]+)([KMB])?/);
+			if (!m) return null;
+			let num = parseFloat(m[1]);
+			if (isNaN(num)) return null;
+			const suf = m[2];
+			if (suf === 'K') num *= 1e3; else if (suf === 'M') num *= 1e6; else if (suf === 'B') num *= 1e9;
+			return Math.round(num);
+		}
+		let followerCount = null;
+		try {
+			const followersLink = document.querySelector('a[href$="/followers"], a[href$="/verified_followers"]');
+			if (followersLink) {
+				const numSpan = followersLink.querySelector('span');
+				const txt = numSpan ? (numSpan.textContent || '') : (followersLink.textContent || '');
+				const parsed = parseHumanNumber(txt);
+				if (parsed) followerCount = parsed;
+			}
+		} catch (_) {}
 		// User ID attempt via follow button's data-testid
 		let userId = null;
 		const followBtn = document.querySelector('[data-testid$="-follow"], [data-testid$="-unfollow"]');
@@ -141,7 +177,7 @@
 			const idx = dt.indexOf('-');
 			if (idx > 0) userId = dt.slice(0, idx);
 		}
-		return { handle, displayName, userId };
+		return { handle, displayName, userId, followerCount };
 	}
 
 	function applyFavState(button, isFav) {
@@ -158,6 +194,36 @@
 		}
 	}
 
+	function resetHostVisual(host) {
+		if (!host || !host.shadowRoot) return;
+		const btn = host.shadowRoot.querySelector('.button');
+		if (!btn) return;
+		btn.classList.remove('is-active');
+		btn.setAttribute('aria-pressed', 'false');
+		btn.setAttribute('aria-label', 'Add to favorites');
+		btn.title = 'Add to favorites';
+	}
+
+	function removeExistingHosts() {
+		try {
+			const hosts = document.querySelectorAll(`#${HOST_ID}`);
+			hosts.forEach((h) => {
+				try { if (h.__utt_ro) h.__utt_ro.disconnect(); } catch (_) {}
+				try { h.remove(); } catch (_) {}
+			});
+		} catch (_) {}
+	}
+
+	async function updateFavoriteState(host) {
+		try {
+			const info = getProfileInfo();
+			if (!info || !info.handle || !window.UTTFavorites) return;
+			const isFav = await window.UTTFavorites.isFavorite(info.handle);
+			const btn = host && host.shadowRoot ? host.shadowRoot.querySelector('.button') : null;
+			if (btn) applyFavState(btn, isFav);
+		} catch (_) {}
+	}
+
 	function syncToTargetLayout(target, host) {
 		try {
 			const cs = getComputedStyle(target);
@@ -171,62 +237,102 @@
 			host.style.height = `${size}px`;
 			host.style.width = "auto";
 			host.style.flex = "0 0 auto";
-			// Pixel-perfect vertical centering relative to target
-			// Align baseline horizontally by mirroring target's vertical padding/border
-			host.style.marginTop = cs.marginTop;
-			host.style.marginBottom = cs.marginBottom;
-			host.style.paddingTop = cs.paddingTop;
-			host.style.paddingBottom = cs.paddingBottom;
-			// Reset transform in case it was set earlier
+			// Vertical alignment: rely on flex centering + equal heights
 			host.style.transform = "translateY(0)";
+			// Horizontal spacing: prefer parent gap; if yoksa target’in sağ marjinini kullan
+			const parent = host.parentElement || target.parentElement;
+			if (parent) {
+				const cps = getComputedStyle(parent);
+				let gap = (cps.columnGap && cps.columnGap !== "normal") ? parseFloat(cps.columnGap) : parseFloat(cps.gap);
+				if (!gap || Number.isNaN(gap)) gap = 8;
+				const sidePad = 0; // disable left padding as requested
+				host.style.marginLeft = "0";
+				host.style.marginRight = `${8}px`;
+			} else {
+				host.style.marginLeft = "0";
+				host.style.marginRight = "8px";
+			}
 		} catch (_) {}
+	}
+
+	function waitForStableBox(element, onStable, attempts = 10) {
+		let last = 0;
+		function frame() {
+			const rect = element.getBoundingClientRect();
+			const h = Math.round(rect.height);
+			if (h >= 24 && Math.abs(h - last) <= 1) {
+				onStable();
+				return;
+			}
+			last = h;
+			if (attempts-- > 0) requestAnimationFrame(frame); else onStable();
+		}
+		requestAnimationFrame(frame);
 	}
 
 	function isViewingOwnProfile() {
 		return !!document.querySelector(SELF_EDIT_SELECTOR);
 	}
 
-	function findTargetForOthers(root = document) {
-		// Prefer DM button (center) as anchor; fallback to actions container
-		return (
-			root.querySelector(DM_BUTTON_SELECTOR) ||
-			root.querySelector('[data-testid="userActions"]') ||
-			root.querySelector(FOLLOW_CONTAINER_SELECTOR)
-		);
+	function findActionBarAndAnchor(root = document) {
+		const follow = root.querySelector(FOLLOW_CONTAINER_SELECTOR);
+		const dm = root.querySelector(DM_BUTTON_SELECTOR);
+		const more = root.querySelector(ACTIONS_CONTAINER_SELECTOR);
+
+		// Primary: anchor right before Follow in its direct parent container
+		if (follow && follow.parentElement) {
+			return { container: follow.parentElement, refNode: follow, measureTarget: follow };
+		}
+
+		// Fallback: append right after the rightmost of dm/more inside their parent
+			const candidates = [dm, more].filter(Boolean);
+		if (candidates.length > 0) {
+			let rightmost = candidates[0];
+			try {
+				candidates.forEach((n) => {
+					if (!n) return;
+					const rN = n.getBoundingClientRect();
+					const rR = rightmost.getBoundingClientRect();
+					if (rN.left > rR.left) rightmost = n;
+				});
+			} catch (_) {}
+				const container = rightmost.parentElement;
+				// place right after rightmost and add breathing space with marginLeft on host
+				const refNode = rightmost.nextElementSibling; // insert after rightmost
+			return { container, refNode, measureTarget: rightmost };
+		}
+
+		return { container: null, refNode: null, measureTarget: null };
 	}
 
 	function injectIfNeeded(root = document) {
-		if (isViewingOwnProfile()) return false; // do not show on own profile
-		const target = findTargetForOthers(root);
-		if (!target) return false;
+		if (isViewingOwnProfile()) { removeExistingHosts(); return false; } // do not show on own profile
+		const { container, refNode, measureTarget } = findActionBarAndAnchor(root);
+		if (!container || !measureTarget) return false;
 
-		const parent = target.parentElement; // Insert as a sibling (left side)
-		if (!parent) return false;
-
-		if (parent.querySelector(`#${HOST_ID}`)) return true; // already injected
+		const existingAnywhere = document.getElementById(HOST_ID);
+		if (existingAnywhere) {
+			if (existingAnywhere.parentElement !== container) {
+				try { container.insertBefore(existingAnywhere, refNode || null); } catch (_) {}
+			}
+			// If host already present in this container, just resync layout and state
+			waitForStableBox(measureTarget, () => syncToTargetLayout(measureTarget, existingAnywhere));
+			updateFavoriteState(existingAnywhere);
+			return true;
+		}
 
 		const host = createHost();
 		try {
-			// If parent is a flex container with row-reverse or gaps, preserve spacing.
-			const csParent = getComputedStyle(parent);
-			if (csParent.display.includes("flex")) {
-				host.style.marginRight = csParent.columnGap && csParent.columnGap !== "normal" ? csParent.columnGap : csParent.gap;
-			}
-			parent.insertBefore(host, target);
-			// Match the height/spacing of the target control precisely
-			syncToTargetLayout(target, host);
+			// Make sure container centers children vertically and has no unexpected align
+			try { if (container.style) container.style.alignItems = container.style.alignItems || 'center'; } catch (_) {}
+			container.insertBefore(host, refNode || null);
+			// Measure after layout settles
+			waitForStableBox(measureTarget, () => syncToTargetLayout(measureTarget, host));
 			// Initialize favorite state asynchronously
-			setTimeout(async () => {
-				const info = getProfileInfo();
-				if (info && info.handle && window.UTTFavorites) {
-					const isFav = await window.UTTFavorites.isFavorite(info.handle);
-					const btn = host.shadowRoot && host.shadowRoot.querySelector('.button');
-					if (btn) applyFavState(btn, isFav);
-				}
-			}, 0);
+			setTimeout(() => updateFavoriteState(host), 0);
 			if ("ResizeObserver" in window) {
-				const ro = new ResizeObserver(() => syncToTargetLayout(target, host));
-				ro.observe(target);
+				const ro = new ResizeObserver(() => syncToTargetLayout(measureTarget, host));
+				ro.observe(measureTarget);
 				// Keep a reference to avoid GC
 				host.__utt_ro = ro;
 			}
@@ -237,7 +343,10 @@
 	}
 
 	// Initial attempt after idle
-	const initial = () => injectIfNeeded();
+	const initial = () => {
+		currentProfileKey = getProfileKeyFromLocation();
+		injectIfNeeded();
+	};
 	if ("requestIdleCallback" in window) {
 		requestIdleCallback(initial, { timeout: 2000 });
 	} else {
@@ -245,10 +354,59 @@
 	}
 
 	// Observe DOM for SPA navigations/rerenders
-	const observer = new MutationObserver(() => {
-		injectIfNeeded();
+		const observer = new MutationObserver(() => {
+		const key = getProfileKeyFromLocation();
+		if (key !== currentProfileKey) {
+			currentProfileKey = key;
+			// On URL change, re-inject and re-measure from scratch
+			// If one or more hosts exist, reset their visual state before updating
+				if (isViewingOwnProfile()) { removeExistingHosts(); return; }
+				const allHosts = document.querySelectorAll(`#${HOST_ID}`);
+				allHosts.forEach((h) => resetHostVisual(h));
+				injectIfNeeded();
+			return;
+		}
+			if (!injectIfNeeded()) {
+			// If already injected, just resync favorite state to avoid stale yellow button
+			const host = document.getElementById(HOST_ID);
+			if (host) {
+				updateFavoriteState(host);
+				// Also re-measure target in case layout changed without URL change
+				const { measureTarget } = findActionBarAndAnchor(document);
+				if (measureTarget) waitForStableBox(measureTarget, () => syncToTargetLayout(measureTarget, host));
+			}
+		}
 	});
-	observer.observe(document.body, { childList: true, subtree: true });
+	observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+
+	// Fallback: listen to history navigation (back/forward) and pushState
+	(function patchHistory() {
+		const push = history.pushState;
+		history.pushState = function () {
+			const ret = push.apply(this, arguments);
+			setTimeout(() => {
+				const key = getProfileKeyFromLocation();
+				if (key !== currentProfileKey) {
+					currentProfileKey = key;
+					if (isViewingOwnProfile()) { removeExistingHosts(); return; }
+					const allHosts = document.querySelectorAll(`#${HOST_ID}`);
+					allHosts.forEach((h) => resetHostVisual(h));
+					injectIfNeeded();
+				}
+			}, 0);
+			return ret;
+		};
+		window.addEventListener("popstate", () => {
+			const key = getProfileKeyFromLocation();
+			if (key !== currentProfileKey) {
+				currentProfileKey = key;
+				if (isViewingOwnProfile()) { removeExistingHosts(); return; }
+				const allHosts = document.querySelectorAll(`#${HOST_ID}`);
+				allHosts.forEach((h) => resetHostVisual(h));
+				injectIfNeeded();
+			}
+		});
+	})();
 })();
 
 
