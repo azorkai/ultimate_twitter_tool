@@ -30,18 +30,33 @@
 		.panels { border: 1px solid var(--color-border); border-radius: 0 0 var(--radius-md) var(--radius-md); padding: var(--space-5); background: var(--color-surface); }
 		.panel { display: none; }
 		.panel[aria-hidden="false"] { display: block; }
+
+
+		/* Favorites */
+		.fav-head { display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-bottom: var(--space-3); }
+		.fav-actions { display:flex; align-items:center; gap: 8px; }
+		.fav-grid { display:grid; grid-template-columns: 1fr; gap: 10px; }
+		@media (min-width: 540px) { .fav-grid { grid-template-columns: 1fr 1fr; } }
+		.fav-card { display:flex; align-items:center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--color-elev); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+		.fav-left { display:flex; align-items:center; gap: 10px; min-width: 0; }
+		.fav-avatar { width: 36px; height: 36px; border-radius: 50%; display:grid; place-items:center; background: linear-gradient(180deg,#1f2a44,#141b2b); border: 1px solid var(--color-border); color: #cbd5e1; font-weight: 700; }
+		.fav-meta { display:flex; flex-direction: column; gap: 2px; min-width: 0; }
+		.fav-handle { font-weight: 600; }
+		.fav-name { color: var(--color-text-dim); font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+		.fav-badge { background: #0f1629; border: 1px solid var(--color-border); border-radius: var(--radius-pill); padding: 2px 8px; font-size: var(--text-sm); color: var(--color-text); }
 	</style>
 </head>
 <body>
 	<div class="wrap elev-card card">
 		<div class="header">
 			<div class="h1">Settings</div>
-			<button id="save" class="btn btn-primary">Save</button>
+			<button id="save" class="btn btn-primary" type="button">Save</button>
 		</div>
 		<div class="tabs" role="tablist" aria-label="Settings sections">
-			<button class="tab" role="tab" id="tab-adblocker" aria-controls="panel-adblocker" aria-selected="false">Ad Blocker</button>
-			<button class="tab" role="tab" id="tab-follow" aria-controls="panel-follow" aria-selected="true">Follow Back</button>
-			<button class="tab" role="tab" id="tab-interaction" aria-controls="panel-interaction" aria-selected="false">Interaction</button>
+			<button class="tab" role="tab" id="tab-adblocker" aria-controls="panel-adblocker" aria-selected="false" type="button">Ad Blocker</button>
+			<button class="tab" role="tab" id="tab-follow" aria-controls="panel-follow" aria-selected="true" type="button">Follow Back</button>
+			<button class="tab" role="tab" id="tab-favorites" aria-controls="panel-favorites" aria-selected="false" type="button">Favorites</button>
+			<button class="tab" role="tab" id="tab-interaction" aria-controls="panel-interaction" aria-selected="false" type="button">Interaction</button>
 		</div>
 		<div class="panels">
 			<section id="panel-adblocker" class="panel" role="tabpanel" aria-labelledby="tab-adblocker" aria-hidden="true">
@@ -62,56 +77,24 @@
 					<div></div>
 				</div>
 			</section>
+			<section id="panel-favorites" class="panel" role="tabpanel" aria-labelledby="tab-favorites" aria-hidden="true">
+				<div class="fav-head">
+					<div class="label">Favorites</div>
+					<div class="fav-actions">
+						<button id="fav-refresh" class="btn btn-ghost">Refresh</button>
+						<button id="fav-clear" class="btn">Clear all</button>
+					</div>
+				</div>
+				<p id="fav-empty" class="help" style="margin-top:0;">No favorites yet. Add profiles from X and they will appear here.</p>
+				<div id="fav-list" class="fav-grid"></div>
+			</section>
 			<section id="panel-interaction" class="panel" role="tabpanel" aria-labelledby="tab-interaction" aria-hidden="true">
 				<p class="help">Interaction settings will appear here. (Coming soon)</p>
 			</section>
 		</div>
 	</div>
 
-	<script type="module">
-		const safe = document.getElementById('safe-mode');
-		const maxF = document.getElementById('max-follows');
-		const saveBtn = document.getElementById('save');
-		const tabs = Array.from(document.querySelectorAll('.tab'));
-		const panels = Array.from(document.querySelectorAll('.panel'));
-
-		function setActiveTab(id) {
-			const tabId = `tab-${id}`;
-			const panelId = `panel-${id}`;
-			tabs.forEach(t => t.setAttribute('aria-selected', String(t.id === tabId)));
-			panels.forEach(p => p.setAttribute('aria-hidden', String(p.id !== panelId)));
-			chrome.storage.sync.set({ optionsSelectedTab: id }).catch(() => {});
-		}
-
-		tabs.forEach(tab => {
-			tab.addEventListener('click', () => {
-				const id = tab.id.replace('tab-', '');
-				setActiveTab(id);
-			});
-			tab.addEventListener('keydown', (e) => {
-				if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-				e.preventDefault();
-				const idx = tabs.indexOf(tab);
-				const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
-				tabs[next].focus();
-				const id = tabs[next].id.replace('tab-', '');
-				setActiveTab(id);
-			});
-		});
-
-		(async () => {
-			const { safeMode = true, maxFollows = 20, optionsSelectedTab = 'follow' } = await chrome.storage.sync.get({ safeMode: true, maxFollows: 20, optionsSelectedTab: 'follow' });
-			if (safe) safe.checked = Boolean(safeMode);
-			if (maxF) maxF.value = String(maxFollows);
-			setActiveTab(optionsSelectedTab);
-		})();
-
-		saveBtn.addEventListener('click', async () => {
-			await chrome.storage.sync.set({ safeMode: Boolean(safe?.checked), maxFollows: Number(maxF?.value || 20) });
-			saveBtn.textContent = 'Saved';
-			setTimeout(() => saveBtn.textContent = 'Save', 1000);
-		});
-	</script>
+	<script type="module" src="./options.js"></script>
 </body>
 </html>
 
