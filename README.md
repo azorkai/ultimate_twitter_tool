@@ -1,6 +1,6 @@
 # Ultimate X Tool (Chrome Extension, MV3)
 
-Minimal, modern, and safe helper for X. Primary goal: follow back verified followers with human‑like pacing. Built with plain MV3 modules; no build step.
+Minimal, modern, and privacy‑first helper for X. Now includes a live Network Debugger and a DM Inbox viewer with an elegant modal chat UI. Built with plain MV3 modules; no build step.
 
 ## Features
 
@@ -51,7 +51,7 @@ Works on Chromium‑based browsers that support MV3 (Chrome, Edge, Brave).
 1. Open the popup → click **Settings** to open the options page.
 2. Go to the **Debug** tab and toggle:
    - `Enable Network Debugger`
-   - `Show Debug Panel` (shows a small bottom-left window with a red border)
+   - `Show Debug Panel` (draggable, resizable red‑border overlay)
    - Optionally adjust `Max entries` and `Auto persist logs`.
 3. On any `https://x.com` page:
    - The debugger intercepts page `fetch` and `XMLHttpRequest` calls only for X/Twitter hosts.
@@ -60,13 +60,16 @@ Works on Chromium‑based browsers that support MV3 (Chrome, Edge, Brave).
    - Click `Export` (or from Options `Export JSON`) to download logs as a JSON file.
 4. Sensitive headers like `authorization`, `cookie`, `x-csrf-token`, `x-guest-token` are redacted. Binary bodies are skipped; JSON/text bodies are previewed (truncated).
 
+### Messages (DM)
+
+1. Options → **Messages** → click **SYNC**. If no X tab is open, the tool opens `https://x.com/messages` automatically and syncs.
+2. After sync, click any conversation card to open the modal thread view. Latest messages are rendered with sender labels (“You” vs other name/handle).
+3. Use **Export JSON** to download the snapshot, or **Remove All Data** to clear local storage.
+
 ## How it works
 
 - The popup routes between `Home`, `Follow Back`, `Engage`, and `Favorites` pages.
 - When you click Follow Back, the popup stores intent and navigates the active tab to your `verified_followers` page. Once loaded, a content script runs the flow and updates progress via `chrome.storage.local`.
-- Events used:
-  - `UTT_START_FOLLOW_BACK`, `UTT_TOGGLE_PAUSE`, `UTT_CANCEL` (popup → content)
-  - Progress state is mirrored to `followProgress` in local storage for UI.
 - The paginator at the bottom provides compact navigation; arrow keys are also supported.
 
 ### Network Debugger internals
@@ -85,12 +88,19 @@ Works on Chromium‑based browsers that support MV3 (Chrome, Edge, Brave).
 - Optional floating panel shows ON/OFF and blocked counter; you can toggle it from Options.
 - Options page sends messages to all open `x.com` tabs to apply changes instantly (enable/disable, panel visibility, mode, force refresh).
 
+### Messages internals
+
+- `src/content/dm-sync.js` captures CSRF/Auth headers from in‑page activity and watches for `DmInbox` GraphQL calls. If `2/dm/inbox.json` is 404, it falls back to `1.1/dm/inbox_initial_state.json`.
+- Responses are normalized to a snapshot containing `conversations`, `messagesByConv`, optional `users` map, and `meId`.
+- Options page renders cards and a polished modal chat using this snapshot.
+
 ## Permissions
 
 - `storage`: Save lightweight settings and progress state
 - `tabs`: Open/update current tab to the verified followers page
 - `scripting`: Inject custom events used for coordination
-- `host_permissions`: `https://x.com/*` only
+-- `host_permissions`: `https://x.com/*` only
+- `downloads`: export Network Debugger logs from the background service worker
 
 Notes for Ad Blocker:
 - Uses only `chrome.storage.local` for settings and counters.
@@ -100,6 +110,7 @@ Notes for Ad Blocker:
 
 - Runs only on `x.com` pages. No external requests to third‑party servers.
 - No credentials stored. Only minimal configuration in `chrome.storage.sync` and ephemeral run state in `chrome.storage.local`.
+- Network Debugger redacts sensitive headers and truncates bodies before persisting/exporting.
 
 ## Favorites
 
