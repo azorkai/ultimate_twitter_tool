@@ -21,6 +21,7 @@
         "src/content/verified-followers.js",
         "src/content/profile-scraper.js",
         "src/content/favorites.js",
+        "src/content/engage.js",
         "src/content/profile-button.js"
       ],
       "run_at": "document_idle"

@@ -152,6 +152,7 @@
 					<select id="engage-type" class="btn" style="padding:8px 12px;">
 						<option value="likes">Likes</option>
 						<option value="retweets">Retweets</option>
+						<option value="both">Likes + Retweets</option>
 					</select>
 				</div>
 				<div class="row">
@@ -166,10 +167,16 @@
 						<option value="50">50</option>
 					</select>
 				</div>
-				<div class="row">
+				<div class="row engage-controls" style="align-items: center; gap: 8px; flex-wrap: wrap;">
 					<button id="open-engage-feed" class="btn">Open Engage Feed</button>
 					<button id="start-engage" class="btn btn-primary">Start Engage</button>
+					<button id="cancel-engage" class="btn btn-danger">Cancel</button>
 				</div>
+				<div class="progress-wrap" aria-live="polite">
+					<div class="progress-bar"><div class="progress-fill" id="eng-progress-fill" style="width:0%"></div></div>
+					<div class="progress-stats"><span id="eng-progress-text">0 / 0</span> <span id="eng-status-text" class="muted">Idle</span></div>
+				</div>
+				<div id="eng-log" class="log-box" aria-live="polite" style="margin-top:12px;"></div>
 			</section>
 
 			<section id="page-favorites" class="page" data-page="favorites" role="tabpanel" aria-labelledby="tab-favorites" hidden>
