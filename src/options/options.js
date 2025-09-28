@@ -1,6 +1,14 @@
 const safe = document.getElementById('safe-mode');
 const maxF = document.getElementById('max-follows');
 const saveBtn = document.getElementById('save');
+// Ad Blocker elements
+const adEnabled = document.getElementById('ad-enabled');
+const adPanel = document.getElementById('ad-panel');
+const adMode = document.getElementById('ad-mode');
+const adCount = document.getElementById('ad-count');
+const adLast = document.getElementById('ad-last');
+const adSave = document.getElementById('ad-save');
+const adRefresh = document.getElementById('ad-refresh');
 const tabs = Array.from(document.querySelectorAll('.tab'));
 const panels = Array.from(document.querySelectorAll('.panel'));
 let userInteracted = false;
@@ -99,5 +107,88 @@ saveBtn?.addEventListener('click', async () => {
         }
     } catch (_) {}
 });
+// Ad Blocker logic
+const AD_KEYS = {
+    enabled: 'adBlockerEnabled',
+    panel: 'adBlockerPanelEnabled',
+    removeCompletely: 'removeAdsCompletely',
+    chillMode: 'chillModeEnabled',
+    count: 'blockedAdsCount',
+    last: 'lastBlockedTime'
+};
+
+async function loadAdSettings() {
+    try {
+        const store = await chrome.storage.local.get({
+            [AD_KEYS.enabled]: true,
+            [AD_KEYS.panel]: false,
+            [AD_KEYS.removeCompletely]: true,
+            [AD_KEYS.chillMode]: false,
+            [AD_KEYS.count]: 0,
+            [AD_KEYS.last]: null
+        });
+        if (adEnabled) adEnabled.checked = Boolean(store[AD_KEYS.enabled]);
+        if (adPanel) adPanel.checked = Boolean(store[AD_KEYS.panel]);
+        if (adMode) {
+            const remove = Boolean(store[AD_KEYS.removeCompletely]);
+            const chill = Boolean(store[AD_KEYS.chillMode]);
+            adMode.value = remove ? 'remove' : (chill ? 'chill' : 'message');
+        }
+        if (adCount) adCount.textContent = String(store[AD_KEYS.count] || 0);
+        if (adLast) adLast.textContent = store[AD_KEYS.last] ? new Date(store[AD_KEYS.last]).toLocaleString() : '—';
+    } catch (_) {}
+}
+
+function getActiveXTabQuery() {
+    return chrome.tabs.query({ url: ['https://x.com/*'] });
+}
+
+async function sendToAllXTabs(message) {
+    try {
+        const tabs = await getActiveXTabQuery();
+        await Promise.all((tabs || []).map(t => chrome.tabs.sendMessage(t.id, message).catch(() => {})));
+    } catch (_) {}
+}
+
+adSave?.addEventListener('click', async () => {
+    const enabled = Boolean(adEnabled?.checked);
+    const panel = Boolean(adPanel?.checked);
+    const mode = String(adMode?.value || 'remove');
+    const removeCompletely = mode === 'remove';
+    const chillMode = mode === 'chill';
+    try {
+        await chrome.storage.local.set({
+            [AD_KEYS.enabled]: enabled,
+            [AD_KEYS.panel]: panel,
+            [AD_KEYS.removeCompletely]: removeCompletely,
+            [AD_KEYS.chillMode]: chillMode
+        });
+        await sendToAllXTabs({ type: 'UTT_ADBLOCK', name: 'TOGGLE_ENABLED', enabled });
+        await sendToAllXTabs({ type: 'UTT_ADBLOCK', name: 'TOGGLE_PANEL', visible: panel });
+        await sendToAllXTabs({ type: 'UTT_ADBLOCK', name: 'UPDATE_SETTINGS', removeCompletely, chillMode });
+        if (adSave) { adSave.textContent = 'Saved'; setTimeout(() => adSave.textContent = 'Save', 1000); }
+    } catch (_) {}
+});
+
+adRefresh?.addEventListener('click', async () => {
+    try {
+        await sendToAllXTabs({ type: 'UTT_ADBLOCK', name: 'FORCE_REFRESH' });
+        // Also refresh stats
+        setTimeout(loadAdSettings, 500);
+    } catch (_) {}
+});
+
+// Initial load and keep stats in sync while options page open
+loadAdSettings();
+try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (AD_KEYS.count in changes || AD_KEYS.last in changes) {
+            if (adCount && changes[AD_KEYS.count]) adCount.textContent = String(changes[AD_KEYS.count].newValue || 0);
+            if (adLast) adLast.textContent = (changes[AD_KEYS.last] && changes[AD_KEYS.last].newValue) ? new Date(changes[AD_KEYS.last].newValue).toLocaleString() : '—';
+        }
+    });
+} catch (_) {}
+
 
 

@@ -18,6 +18,7 @@
       "matches": ["https://x.com/*"],
       "js": [
         "src/content/dev-logger.js",
+        "src/content/ad-blocker.js",
         "src/content/verified-followers.js",
         "src/content/profile-scraper.js",
         "src/content/favorites.js",

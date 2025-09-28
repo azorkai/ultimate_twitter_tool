@@ -60,7 +60,38 @@
 		</div>
 		<div class="panels">
 			<section id="panel-adblocker" class="panel" role="tabpanel" aria-labelledby="tab-adblocker" aria-hidden="true">
-				<p class="help">Ad Blocker settings will appear here. (Coming soon)</p>
+				<div class="grid">
+					<div class="label">Enable Ad Blocker</div>
+					<div><input id="ad-enabled" class="switch" type="checkbox" /></div>
+					<div class="help">Blocks promoted ads in timeline and modules.</div>
+					<div></div>
+
+					<div class="label">Show Floating Panel</div>
+					<div><input id="ad-panel" class="switch" type="checkbox" /></div>
+					<div class="help">Quick toggle and live blocked counter on pages.</div>
+					<div></div>
+
+					<div class="label">Block Mode</div>
+					<div>
+						<select id="ad-mode" aria-label="Ad block mode">
+							<option value="remove">Remove completely</option>
+							<option value="message">Show blocked message</option>
+							<option value="chill">Chill mode (cats)</option>
+						</select>
+					</div>
+					<div class="help">Choose how ads are treated on the page.</div>
+					<div></div>
+
+					<div class="label">Stats</div>
+					<div>
+						<div id="ad-stats" class="help">Blocked: <span id="ad-count">0</span> <span id="ad-last" style="margin-left:8px;">—</span></div>
+					</div>
+					<div></div><div></div>
+				</div>
+				<div class="actions">
+					<button id="ad-refresh" class="btn">Force refresh</button>
+					<button id="ad-save" class="btn btn-primary">Save</button>
+				</div>
 			</section>
 			<section id="panel-follow" class="panel" role="tabpanel" aria-labelledby="tab-follow" aria-hidden="false">
 				<div class="grid">
