@@ -10,6 +10,7 @@ Minimal, modern, and safe helper for X. Primary goal: follow back verified follo
 - **Engage (Experimental)**: Configure an engagement type and max actions, open a relevant feed, and dispatch a start event (WIP).
 - **Ad Blocker (New)**: Blocks promoted ads on X with three modes — Remove, Message, or Chill (replaces ads with cute cat photos). Optional floating panel with ON/OFF and a live counter.
 - **Keyboard navigation**: Use `←` / `→` to switch popup pages. Minimal paginator with dots and arrows.
+- **Network Debugger (New)**: Bottom-left floating panel with a red border to watch X network calls (fetch/XHR), redact sensitive headers, preview JSON/text bodies, persist logs locally, and export to JSON.
 - **Privacy‑first**: No external servers; only uses Chrome storage.
 
 ## Install (Developer Mode)
@@ -45,6 +46,20 @@ Works on Chromium‑based browsers that support MV3 (Chrome, Edge, Brave).
    - Click **Force refresh** to rescan the current X tabs immediately
 3. Browse `https://x.com`; the content script will continuously detect and block ads while you scroll.
 
+### Network Debugger
+
+1. Open the popup → click **Settings** to open the options page.
+2. Go to the **Debug** tab and toggle:
+   - `Enable Network Debugger`
+   - `Show Debug Panel` (shows a small bottom-left window with a red border)
+   - Optionally adjust `Max entries` and `Auto persist logs`.
+3. On any `https://x.com` page:
+   - The debugger intercepts page `fetch` and `XMLHttpRequest` calls only for X/Twitter hosts.
+   - Press `Alt+Shift+N` to pause/resume capture.
+   - Use `Clear` to wipe the in-memory and persisted log.
+   - Click `Export` (or from Options `Export JSON`) to download logs as a JSON file.
+4. Sensitive headers like `authorization`, `cookie`, `x-csrf-token`, `x-guest-token` are redacted. Binary bodies are skipped; JSON/text bodies are previewed (truncated).
+
 ## How it works
 
 - The popup routes between `Home`, `Follow Back`, `Engage`, and `Favorites` pages.
@@ -53,6 +68,12 @@ Works on Chromium‑based browsers that support MV3 (Chrome, Edge, Brave).
   - `UTT_START_FOLLOW_BACK`, `UTT_TOGGLE_PAUSE`, `UTT_CANCEL` (popup → content)
   - Progress state is mirrored to `followProgress` in local storage for UI.
 - The paginator at the bottom provides compact navigation; arrow keys are also supported.
+
+### Network Debugger internals
+
+- Page injector `src/content/injectors/net-hook.js` wraps `window.fetch` and `XMLHttpRequest` in the page context and posts sanitized events back to the content script.
+- Content script `src/content/net-debugger.js` renders the overlay (bottom-left, red border), merges start/end events, maintains a bounded ring buffer, persists to `chrome.storage.local`, and sends export requests.
+- Background `src/background/service-worker.js` handles `EXPORT_LOGS` by reading storage and using the `downloads` API to save a JSON file.
 
 ### Ad Blocker internals
 

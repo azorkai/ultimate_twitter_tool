@@ -1,0 +1,5 @@
+# Ignore generated DM snapshot and network log exports
+utt-dm-snapshot-2025-09-28T15-15-01-823Z.json
+utt-network-logs-2025-09-28T14-15-39-880Z.json
+
+

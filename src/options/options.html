@@ -44,6 +44,32 @@
 		.fav-handle { font-weight: 600; }
 		.fav-name { color: var(--color-text-dim); font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 		.fav-badge { background: #0f1629; border: 1px solid var(--color-border); border-radius: var(--radius-pill); padding: 2px 8px; font-size: var(--text-sm); color: var(--color-text); }
+
+			/* DM UI */
+			.dm-preview { color: var(--color-text-dim); font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px; }
+			.dm-meta { color: var(--color-text-dim); font-size: var(--text-sm); }
+			.dm-msgs { margin-top: 8px; background: #0f1629; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 8px 10px; max-height: 160px; overflow: auto; }
+			.dm-line { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
+			.dm-line:last-child { border-bottom: 0; }
+			.dm-text { white-space: pre-wrap; word-break: break-word; color: var(--color-text); }
+			.dm-time { color: var(--color-text-dim); font-size: var(--text-xs); }
+			.dm-me { background: rgba(91,140,255,0.08); border-radius: 6px; padding: 4px 6px; }
+			.dm-other { background: rgba(16,185,129,0.06); border-radius: 6px; padding: 4px 6px; }
+			.dm-card { display:grid; grid-template-columns: 44px 1fr; gap: 12px; }
+			.dm-avatar { width: 44px; height: 44px; border-radius: 50%; background: #111827; border: 1px solid var(--color-border); display:grid; place-items:center; color:#9fb3ff; font-weight:700; overflow:hidden; }
+			.dm-avatar img { width: 44px; height: 44px; object-fit: cover; }
+
+			/* Modal */
+			.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display:flex; align-items:center; justify-content:center; padding: 24px; }
+			.modal-overlay[hidden] { display: none !important; }
+			.modal-card { width: min(860px, 94vw); max-height: 86vh; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: grid; grid-template-rows: auto 1fr; }
+			.modal-header { display:flex; align-items:center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--color-border); }
+			.mh-left { display:flex; align-items:center; gap: 10px; }
+			.modal-thread { padding: 14px; overflow: auto; display:flex; flex-direction: column; gap: 8px; }
+			.bubble { max-width: 78%; padding: 8px 10px; border-radius: 12px; background: #0f1629; border: 1px solid var(--color-border); color: var(--color-text); align-self: flex-start; }
+			.bubble.me { background: linear-gradient(180deg, #6f99ff1a, #4d79ff14); border-color: rgba(112,153,255,0.35); align-self: flex-end; }
+			.bubble .time { display:block; margin-top:4px; font-size: var(--text-xs); color: var(--color-text-dim); }
+			.bubble .sender { display:block; margin-bottom:4px; font-size: var(--text-xs); color: var(--color-text-dim); }
 	</style>
 </head>
 <body>
@@ -57,6 +83,8 @@
 			<button class="tab" role="tab" id="tab-follow" aria-controls="panel-follow" aria-selected="true" type="button">Follow Back</button>
 			<button class="tab" role="tab" id="tab-favorites" aria-controls="panel-favorites" aria-selected="false" type="button">Favorites</button>
 			<button class="tab" role="tab" id="tab-interaction" aria-controls="panel-interaction" aria-selected="false" type="button">Interaction</button>
+			<button class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" type="button">Debug</button>
+			<button class="tab" role="tab" id="tab-messages" aria-controls="panel-messages" aria-selected="false" type="button">Messages</button>
 		</div>
 		<div class="panels">
 			<section id="panel-adblocker" class="panel" role="tabpanel" aria-labelledby="tab-adblocker" aria-hidden="true">
@@ -121,6 +149,76 @@
 			</section>
 			<section id="panel-interaction" class="panel" role="tabpanel" aria-labelledby="tab-interaction" aria-hidden="true">
 				<p class="help">Interaction settings will appear here. (Coming soon)</p>
+			</section>
+			<section id="panel-debug" class="panel" role="tabpanel" aria-labelledby="tab-debug" aria-hidden="true">
+				<div class="grid">
+					<div class="label">Enable Network Debugger</div>
+					<div><input id="net-enabled" class="switch" type="checkbox" /></div>
+					<div class="help">Intercepts fetch/XHR on X to analyze API calls.</div>
+					<div></div>
+
+					<div class="label">Show Debug Panel</div>
+					<div><input id="net-panel" class="switch" type="checkbox" /></div>
+					<div class="help">Floating log window at bottom-left with red border.</div>
+					<div></div>
+
+					<div class="label">Max entries</div>
+					<div><input id="net-max" type="number" min="50" max="5000" step="50" value="400" /></div>
+					<div class="help">Oldest entries are pruned once the limit is reached.</div>
+					<div></div>
+
+					<div class="label">Auto persist logs</div>
+					<div><input id="net-persist" class="switch" type="checkbox" checked /></div>
+					<div class="help">Continuously saves to extension storage.</div>
+					<div></div>
+				</div>
+				<div class="actions">
+					<button id="net-clear" class="btn">Clear logs</button>
+					<button id="net-export" class="btn btn-primary">Export JSON</button>
+					<button id="net-save" class="btn btn-primary">Save</button>
+				</div>
+			</section>
+			<section id="panel-messages" class="panel" role="tabpanel" aria-labelledby="tab-messages" aria-hidden="true">
+				<div class="grid">
+					<div class="label">DM Inbox</div>
+					<div style="display:flex; gap:8px; align-items:center;"><button id="dm-sync" class="btn btn-primary" type="button">SYNC</button><button id="dm-refresh" class="btn" type="button">Refresh</button></div>
+					<div class="help">Fetches your latest DM conversations from X into a local snapshot.</div>
+					<div></div>
+					<div class="label">Live Network Console</div>
+					<div><button id="open-net-console" class="btn" type="button">Open</button></div>
+					<div class="help">Mirrors network logs saved by pages (requires Network Debugger enabled).</div>
+					<div></div>
+					<div class="label">Debug Log</div>
+					<div><button id="open-debug-log" class="btn" type="button">Open</button></div>
+					<div class="help">Shows verbose SYNC diagnostics inline.</div>
+					<div></div>
+					<div class="label">Export</div>
+					<div><button id="dm-export" class="btn" type="button">Export JSON</button></div>
+					<div class="help">Download the last synced snapshot as JSON.</div>
+					<div></div>
+
+					<div class="label">Danger Zone</div>
+					<div><button id="dm-clear-all" class="btn btn-danger" type="button">Remove All Data</button></div>
+					<div class="help">Clears local extension data for messages and network logs.</div>
+					<div></div>
+				</div>
+				<p id="dm-status" class="help" style="margin:8px 0 0 0;">—</p>
+				<div id="dm-list" class="fav-grid" style="margin-top:12px;"></div>
+				<div id="dm-modal" class="modal-overlay" hidden>
+					<div class="modal-card">
+						<div class="modal-header">
+							<div class="mh-left">
+								<div id="dm-modal-avatar" class="dm-avatar" aria-hidden="true">💬</div>
+								<div>
+									<div id="dm-modal-title" style="font-weight:700;">Conversation</div>
+									<div id="dm-modal-meta" class="dm-meta">—</div>
+								</div>
+							</div>
+							<button id="dm-modal-close" class="btn">Close</button>
+						</div>
+						<div id="dm-modal-thread" class="modal-thread"></div>
+					</div>
+				</div>
 			</section>
 		</div>
 	</div>
